@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TP_ENTREGABLE</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f8;
+            padding: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #ffffff;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        thead {
+            background-color: #4f46e5;
+            color: white;
+            text-align: left;
+        }
+
+        th,
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tbody tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        input {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            background-color: #4f46e5;
+            color: white;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #3730a3;
+        }
+
+        tfoot input {
+            background-color: #f9fafb;
+        }
+
+        tfoot {
+            background-color: #f3f4f6;
+        }
+
+        .button-danger {
+            background-color: #ef4444;
+        }
+
+        .button-danger:hover {
+            background-color: #b91c1c;
+        }
+    </style>
+
+
+</head>
+
+<body>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Nombre de usuario</th>
+                <th>Email</th>
+                <th>Ciudad</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+
+        <tbody></tbody>
+
+        <tfoot>
+            <tr>
+                <td></td>
+                <td><input id="name" placeholder="Nombre"></td>
+                <td><input id="userName" placeholder="Nombre de usuario"></td>
+                <td><input id="email" placeholder="Email"></td>
+                <td><input id="city" placeholder="Ciudad"></td>
+                <td colspan="2" style="text-align: center"><button id="buttonAdd" onclick="newUser()">Agregar</button>
+                </td>
+            </tr>
+        </tfoot>
+
+    </table>
+
+    <script>
+        const api = "https://684b0d86165d05c5d35b5b09.mockapi.io/api/test/users"
+
+        // PROMESAS
+
+        function onError(request, reject) { // Metodo para onError asi no hay que escribirlo en todas las promesas
+            request.onerror = function () {
+                reject(Error('Error de red'))
+            }
+        }
+
+        function loadUsers() {
+            return new Promise(function (resolve, reject) {
+                const request = new XMLHttpRequest()
+
+                request.open('GET', api)            // Le pide los datos a la API  //  Abre una solicitud HTTP de tipo GET al destino indicado por api
+                request.responseType = 'json'       // Crea un json de la API
+
+                request.onload = function () {       // Se ejecuta la respuesta
+                    console.log(request.status)      // Muestra en la consola el estado, asi si hay error se puede saber que es
+                    if (request.status == 200) {     // 200 == todo bien (el header dice eso)
+                        resolve(request.response)
+
+                    } else {
+                        reject(new Error(request.statusText)) // Muestra el error 
+                    }
+                }
+
+                onError(request, reject)
+
+                request.send()  // Envia la solicitud a la API para ejecutar
+            })
+        }
+
+
+        function addUser(user) {
+            return new Promise(function (resolve, reject) {
+                const request = new XMLHttpRequest()
+
+                request.open('POST', api)   // Usamos POST para llevar 
+                request.setRequestHeader('Content-Type', 'application/json') //Aclara que los datos enviados son de tipo json
+                request.responseType = 'json'                                //Aclara que espera una Rta tipo json
+
+                request.onload = function () {
+                    console.log(request.status)
+                    if (request.status == 201) { // Al llevar un nuevo usuario la Rta. de nuestra API seria 201
+                        resolve(request.response)
+                    }
+                    else {
+                        reject(new Error(request.statusText))
+                    }
+                }
+                onError(request, reject)
+
+                request.send(JSON.stringify(user))  // Cuando ingresamos datos a la API los llevamos como json
+            })
+        }
+
+
+        function modifyUser(id, updateUser) {
+            return new Promise(function (resolve, reject) {
+                const request = new XMLHttpRequest()
+
+                request.open('PUT', `${api}/${id}`) //Busca el ID especifico del usuario a actualizar en este caso
+                request.setRequestHeader('Content-Type', 'application/json')
+                request.responseType = 'json'
+
+                request.onload = function () {
+                    if (request.status == 200) { // Usamos PUT para modificar pero la respuesta es la misma
+                        resolve(request.response)
+                    } else {
+                        reject(new Error(request.statusText))
+                    }
+                }
+
+                onError(request, reject)
+
+                request.send(JSON.stringify(updateUser))
+            })
+        }
+
+
+        function removeUser(id) {
+            return new Promise(function (resolve, reject) {
+                const request = new XMLHttpRequest()
+
+                request.open('DELETE', `${api}/${id}`)
+
+                request.onload = function () {
+                    console.log(request.status)
+                    if (request.status == 200) {
+                        resolve(request.response)
+
+                    } else {
+                        reject(new Error(request.status))
+                    }
+                }
+                onError(request, reject)
+
+                request.send()
+            })
+        }
+
+
+        // FUNCIONES
+
+
+        function getUsers() {                           // TRAE USUARIOS DE LA API
+            loadUsers()                                 // Llama a la promise que carga los usuarios de la API
+                .then(response => {                     // Si todo sale bien devuelve un RESPONSE
+                    response.forEach((user) => {
+                        newRowUser(user)                // Agrega una fila con el usuario
+                    })
+                })
+                .catch(error => console.error("Error al cargar usuarios:", error.message))   // Si hubo algun error lo muestra
+        }
+
+
+
+        function newUser() {
+            const name = document.getElementById('name').value  //Define todos los valores de las constantes segun su ID del html
+            const userName = document.getElementById('userName').value
+            const email = document.getElementById('email').value
+            const city = document.getElementById('city').value
+
+            const user = {                                  // Crea un nuevo objeto user para agregar
+                name: name,                                 // La API se encarga de generar el ID real, no se necesita que genere un nro random
+                userName: userName,
+                email: email,
+                city: city
+            }
+
+            if (!validateFields(user)) {    // Verifica que no esten vacios los campos
+                alert("Campos vacios")
+                return
+            }
+
+            // Agregamos a la API 
+            addUser(user)
+                .then(response => {
+                    // Lo agregamos a la tabla
+                    newRowUser(response) // Si ponemos USER estás mandando un id que la API no reconoce, usar RESPONSE que es el que devuelve la API
+                })
+                .catch(error => console.error("Error al agregar el usuario:", error.message))
+
+            // Limpia los inputs
+            clearInputs()
+        }
+
+        function btnEdit(user, editButton) {
+            const tr = document.getElementById(user.id)
+
+            if (editButton.textContent == "Editar") {
+                tr.cells[1].innerHTML = `<input value="${user.name}">`          // Convierte las celdas a editables
+                tr.cells[2].innerHTML = `<input value="${user.userName}">`
+                tr.cells[3].innerHTML = `<input value="${user.email}">`
+                tr.cells[4].innerHTML = `<input value="${user.city}">`
+
+                editButton.textContent = "Guardar"                              // Cambia el texto del boton a "Guardar"
+
+            } else {
+
+                let newName = tr.cells[1].querySelector('input').value.trim()   // Guarda el contenido modificado en nuevas variables
+                let newuserName = tr.cells[2].querySelector('input').value.trim()
+                let newEmail = tr.cells[3].querySelector('input').value.trim()
+                let newCity = tr.cells[4].querySelector('input').value.trim()
+
+                let updatedUser = {                                             // crea un nuevo usuario con los datos modificados
+                    id: user.id,
+                    name: newName,
+                    userName: newuserName,
+                    email: newEmail,
+                    city: newCity
+                }
+
+                if (!validateFields(updatedUser)) {
+                    alert("Campos vacios!")
+                    return
+                }
+
+                modifyUser(user.id, updatedUser).then(response => {             // Llama a la promise y actualiza los campos
+                    tr.cells[1].innerHTML = updatedUser.name
+                    tr.cells[2].innerHTML = updatedUser.userName
+                    tr.cells[3].innerHTML = updatedUser.email
+                    tr.cells[4].innerHTML = updatedUser.city
+
+                    editButton.textContent = "Editar"                           // Devuelve el texto del boton a "Editar"
+
+                    // Actualizás el objeto original con la respuesta real de la API
+                    user.name = response.name
+                    user.userName = response.userName
+                    user.email = response.email
+                    user.city = response.city
+                }).catch(error => {
+                    console.error("Error al modificar el usuario: ", error.message)
+                })
+            }
+        }
+
+
+
+        // MODULARIZACION
+
+
+        function newRowUser(user) {
+            const tBody = document.getElementsByTagName("tbody")[0]
+            const tr = tBody.insertRow()
+            tr.id = user.id
+            var cell // Declaras una sola vez
+
+            cell = tr.insertCell()
+            cell.innerHTML = user.id
+
+            cell = tr.insertCell()
+            cell.innerHTML = user.name
+
+            cell = tr.insertCell()
+            cell.innerHTML = user.userName
+
+            cell = tr.insertCell()
+            cell.innerHTML = user.email
+
+            cell = tr.insertCell()
+            cell.innerHTML = user.city
+
+
+            // Botón Eliminar
+            cell = tr.insertCell()                              // Nueva celda
+            const btnDelete = document.createElement('button')  // Crea el boton como "btnDelete"
+            btnDelete.textContent = 'Eliminar'                  // Escribe "Eliminar" en el boton
+
+            btnDelete.onclick = function () {                   // Cuando lo apretas llama a la promise removeUser
+                removeUser(user.id)
+                    .then(() => tr.remove())                    // Si sale bien, elimina la fila
+                    .catch(error => console.error("Error al eliminar el usuario:", error.message))
+            }
+
+            cell.appendChild(btnDelete)                         // Muestra el boton
+
+
+            // Botón Editar
+            cell = tr.insertCell()
+            const editButton = document.createElement('button')
+            editButton.textContent = "Editar"
+
+            editButton.onclick = function () {
+                btnEdit(user, editButton)                       // Llamamos a la funcion con los parametros necesarios
+            }
+
+            cell.appendChild(editButton)                        // Muestra el boton
+        }
+
+
+
+
+        function clearInputs() {
+            document.getElementById('name').value = ''
+            document.getElementById('userName').value = ''
+            document.getElementById('email').value = ''
+            document.getElementById('city').value = ''
+        }
+
+        function validateFields(fields) {
+            return fields.name && fields.userName && fields.email && fields.city
+        }
+
+        window.onload = getUsers // Al volver a cargar la pagina haga el getUsers
+    </script>
+
+</body>
+
+</html>
